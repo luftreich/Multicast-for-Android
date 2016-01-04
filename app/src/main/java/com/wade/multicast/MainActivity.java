@@ -10,9 +10,7 @@ import android.widget.Button;
 import android.widget.EditText;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -26,7 +24,6 @@ public class MainActivity extends Activity {
     EditText etMsg;
     EditText etRecvMsg;
     MulticastSocket receiveSock = null;
-    DatagramSocket transmitSock = null;
     WifiManager.MulticastLock mLock = null;
     String recvMsg=null;
 
@@ -49,37 +46,14 @@ public class MainActivity extends Activity {
             }
         );
 
-        try {
-            transmitSock = new DatagramSocket();
-        } catch (SocketException e) {
-            e.printStackTrace();
-        }
-
         WifiManager wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
         mLock = wifi.createMulticastLock("pseudo-ssdp");
         mLock.acquire();
-        try {
-            receiveSock = new MulticastSocket(getPort());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        try {
-            receiveSock.joinGroup(InetAddress.getByName("224.224.224.224"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         NetworkInterface nif = null;
         try {
             nif = NetworkInterface.getByName("wlan0");
         } catch (SocketException e) {
             e.printStackTrace();
-        }
-        if (null != nif) {
-            try {
-                receiveSock.setNetworkInterface(nif);
-            } catch (SocketException e) {
-                e.printStackTrace();
-            }
         }
         Enumeration<InetAddress> enAddr = nif.getInetAddresses();
         InetAddress addr = null;
@@ -90,7 +64,11 @@ public class MainActivity extends Activity {
             else if (addr == null) addr = x;
         }
         try {
+            receiveSock = new MulticastSocket(getPort());
+            receiveSock.joinGroup(InetAddress.getByName("224.224.224.224"));
             receiveSock = new MulticastSocket(new InetSocketAddress(addr, getPort()));
+            receiveSock.joinGroup(InetAddress.getByName("224.224.224.224"));
+            receiveSock.setNetworkInterface(nif);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -113,12 +91,8 @@ public class MainActivity extends Activity {
         byte[] bytes = null;
         try {
             bytes = getMsg().getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-        try {
-            if (null != bytes && null != transmitSock) {
-                transmitSock.send(new DatagramPacket(bytes, bytes.length, InetAddress.getByName("224.224.224.224"), port));
+            if (null != bytes && null != receiveSock) {
+                receiveSock.send(new DatagramPacket(bytes, bytes.length, InetAddress.getByName("224.224.224.224"), port));
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -155,7 +129,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         receiveSock.close();
-        transmitSock.close();
         mLock.release();
         super.onDestroy();
     }
