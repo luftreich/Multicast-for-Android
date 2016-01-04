@@ -67,7 +67,6 @@ public class MainActivity extends Activity {
             receiveSock = new MulticastSocket(getPort());
             receiveSock.joinGroup(InetAddress.getByName("224.224.224.224"));
             receiveSock = new MulticastSocket(new InetSocketAddress(addr, getPort()));
-            receiveSock.joinGroup(InetAddress.getByName("224.224.224.224"));
             receiveSock.setNetworkInterface(nif);
         } catch (IOException e) {
             e.printStackTrace();
